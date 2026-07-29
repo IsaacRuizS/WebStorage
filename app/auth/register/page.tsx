@@ -3,11 +3,9 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button, Card, ErrorText, Input, Label } from "@/components/ui";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -35,8 +33,8 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/");
-    router.refresh();
+    // Navegación dura para que el proxy evalúe la ruta con la sesión recién creada
+    window.location.href = "/";
   }
 
   return (

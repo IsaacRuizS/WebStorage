@@ -2,19 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import type { UserRole } from "@/types/user";
 
 export function AppHeader({ userName, role }: { userName: string; role: UserRole }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleLogout() {
     setLoading(true);
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/auth/login");
-    router.refresh();
+
+    // Navegación dura para que no quede nada de la sesión anterior en el caché del router
+    window.location.href = "/auth/login";
   }
 
   return (

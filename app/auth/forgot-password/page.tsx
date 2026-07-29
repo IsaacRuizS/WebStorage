@@ -3,9 +3,13 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Card, ErrorText, Input, Label } from "@/components/ui";
 
+const REDIRECT_DELAY_MS = 5000;
+
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +36,9 @@ export default function ForgotPasswordPage() {
     }
 
     setMessage(data.message);
+
+    // El usuario alcanza a leer el aviso y se le lleva al login sin que tenga que hacer nada
+    setTimeout(() => router.push("/auth/login"), REDIRECT_DELAY_MS);
   }
 
   return (
@@ -46,8 +53,15 @@ export default function ForgotPasswordPage() {
           <Input id="email" name="email" type="email" required autoComplete="email" />
         </div>
         {error && <ErrorText>{error}</ErrorText>}
-        {message && <p className="text-sm text-green-700 dark:text-green-400">{message}</p>}
-        <Button type="submit" className="w-full" disabled={loading}>
+        {message && (
+          <div className="rounded-md bg-green-50 p-3 dark:bg-green-950">
+            <p className="text-sm text-green-700 dark:text-green-400">{message}</p>
+            <p className="mt-1 text-xs text-green-700 dark:text-green-500">
+              Te llevamos a iniciar sesión en unos segundos...
+            </p>
+          </div>
+        )}
+        <Button type="submit" className="w-full" disabled={loading || Boolean(message)}>
           {loading ? "Enviando..." : "Enviar contraseña temporal"}
         </Button>
       </form>

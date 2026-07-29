@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Button, ErrorText, Input, Label } from "@/components/ui";
 
 export function ChangePasswordForm() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -33,8 +31,8 @@ export function ChangePasswordForm() {
       return;
     }
 
-    router.push("/");
-    router.refresh();
+    // Navegación dura: la cookie cambió y el caché del router todavía guarda la redirección vieja
+    window.location.href = "/";
   }
 
   return (
