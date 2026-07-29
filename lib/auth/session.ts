@@ -64,6 +64,12 @@ export async function revokeSession(sessionId: string) {
   await sessions.updateOne({ _id: new ObjectId(sessionId) }, { $set: { active: false } });
 }
 
+// Al restablecer la contraseña se cierran todas las sesiones abiertas del usuario
+export async function revokeUserSessions(userId: ObjectId) {
+  const sessions = await sessionsCollection();
+  await sessions.updateMany({ user_id: userId, active: true }, { $set: { active: false } });
+}
+
 // La cookie solo vale si su sesión sigue activa en base de datos
 export async function getSession(): Promise<SessionPayload | null> {
   const store = await cookies();

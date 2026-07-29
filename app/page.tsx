@@ -9,7 +9,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <AppHeader userName={session.name} />
+      <AppHeader userName={session.name} role={session.role} />
       <main className="flex-1 bg-zinc-50 px-6 py-10 dark:bg-black">
         <div className="mx-auto max-w-5xl">
           <Card>

@@ -13,6 +13,11 @@ export default function LoginPage() {
           Regístrate
         </Link>
       </p>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <Link href="/auth/forgot-password" className="underline">
+          Olvidé mi contraseña
+        </Link>
+      </p>
     </Card>
   );
 }
