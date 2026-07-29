@@ -52,7 +52,8 @@ export async function POST(request: Request) {
 
   try {
     await uploadObject(storageKey, upload);
-  } catch {
+  } catch (error) {
+    console.error("Supabase rechazó la nueva versión:", error);
     return NextResponse.json({ error: "No se pudo subir la nueva versión" }, { status: 502 });
   }
 
@@ -103,7 +104,8 @@ export async function PATCH(request: Request) {
 
   try {
     await copyObject(version.storage_key, storageKey);
-  } catch {
+  } catch (error) {
+    console.error("Supabase rechazó la copia de la versión:", error);
     return NextResponse.json({ error: "No se pudo restaurar la versión" }, { status: 502 });
   }
 

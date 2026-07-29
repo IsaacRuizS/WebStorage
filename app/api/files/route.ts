@@ -58,7 +58,8 @@ export async function POST(request: Request) {
 
   try {
     await uploadObject(storageKey, upload);
-  } catch {
+  } catch (error) {
+    console.error("Supabase rechazó la subida:", error);
     return NextResponse.json({ error: "No se pudo subir el archivo" }, { status: 502 });
   }
 

@@ -29,7 +29,8 @@ export async function POST(request: Request) {
   // El correo se envía antes de tocar la base: si falla, la contraseña anterior sigue sirviendo
   try {
     await sendTemporaryPassword(user.email, user.name, temporaryPassword);
-  } catch {
+  } catch (error) {
+    console.error("El servidor SMTP rechazó el envío:", error);
     return NextResponse.json({ error: "No se pudo enviar el correo" }, { status: 502 });
   }
 
