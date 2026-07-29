@@ -27,6 +27,12 @@ export function AppHeader({ userName, role }: { userName: string; role: UserRole
           <Link href="/drive" className="hover:text-zinc-900 dark:hover:text-white">
             Mi unidad
           </Link>
+          <Link href="/shared" className="hover:text-zinc-900 dark:hover:text-white">
+            Compartidos
+          </Link>
+          <Link href="/requests" className="hover:text-zinc-900 dark:hover:text-white">
+            Solicitudes
+          </Link>
           {role === "admin" && (
             <Link href="/users" className="hover:text-zinc-900 dark:hover:text-white">
               Usuarios

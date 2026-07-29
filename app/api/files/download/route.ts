@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { fileVersionsCollection, filesCollection } from "@/lib/db/collections";
+import { fileVersionsCollection } from "@/lib/db/collections";
 import { toObjectId } from "@/lib/db/bson";
 import { getSession } from "@/lib/auth/session";
+import { getAccessibleFile } from "@/lib/auth/authorize";
 import { createDownloadUrl } from "@/lib/storage/supabase";
 
 export async function GET(request: Request) {
@@ -17,12 +18,7 @@ export async function GET(request: Request) {
 
   // Con ?version se descarga una revisión del historial, sin él la vigente
   const fileId = version ? version.file_id : toObjectId(params.get("id"));
-  const file = fileId
-    ? await (await filesCollection()).findOne({
-        _id: fileId,
-        owner_id: new ObjectId(session.sub),
-      })
-    : null;
+  const file = fileId ? await getAccessibleFile(fileId, new ObjectId(session.sub)) : null;
   if (!file) return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
 
   const storageKey = version ? version.storage_key : file.storage_key;

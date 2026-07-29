@@ -35,6 +35,29 @@ function useResourceActions() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<{ id: string; url: string } | null>(null);
+
+  async function share(id: string, resourceType: "file" | "folder") {
+    setError(null);
+    setPendingId(id);
+
+    const response = await fetch("/api/shares", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resource_id: id, resource_type: resourceType }),
+    });
+
+    setPendingId(null);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? "No se pudo generar el enlace");
+      return;
+    }
+
+    const { token } = await response.json();
+    setShareUrl({ id, url: `${window.location.origin}/share?token=${token}` });
+  }
 
   async function run(id: string, url: string, options: RequestInit) {
     setError(null);
@@ -66,7 +89,18 @@ function useResourceActions() {
     return run(id, url, { method: "DELETE" });
   }
 
-  return { error, pendingId, patch, remove };
+  return { error, pendingId, shareUrl, patch, remove, share };
+}
+
+function ShareLinkBox({ url }: { url: string }) {
+  return (
+    <div className="w-full">
+      <p className="text-xs text-zinc-500">
+        Cualquiera con este enlace deberá solicitarte acceso para verlo.
+      </p>
+      <Input readOnly value={url} onFocus={(event) => event.currentTarget.select()} />
+    </div>
+  );
 }
 
 export function NewFolderForm({ parentId }: { parentId: string | null }) {
@@ -164,7 +198,7 @@ export function FolderList({
   folders: FolderRow[];
   allFolders: FolderRow[];
 }) {
-  const { error, pendingId, patch, remove } = useResourceActions();
+  const { error, pendingId, shareUrl, patch, remove, share } = useResourceActions();
   const [editingId, setEditingId] = useState<string | null>(null);
 
   async function handleRename(event: FormEvent<HTMLFormElement>, id: string) {
@@ -218,6 +252,13 @@ export function FolderList({
                     Renombrar
                   </Button>
                   <Button
+                    variant="secondary"
+                    disabled={pendingId === folder.id}
+                    onClick={() => share(folder.id, "folder")}
+                  >
+                    Compartir
+                  </Button>
+                  <Button
                     variant="danger"
                     disabled={pendingId === folder.id}
                     onClick={() =>
@@ -233,6 +274,7 @@ export function FolderList({
                 </div>
               </>
             )}
+            {shareUrl?.id === folder.id && <ShareLinkBox url={shareUrl.url} />}
           </li>
         ))}
       </ul>
@@ -242,7 +284,7 @@ export function FolderList({
 
 export function FileList({ files, folders }: { files: FileRow[]; folders: FolderRow[] }) {
   const router = useRouter();
-  const { error, pendingId, patch, remove } = useResourceActions();
+  const { error, pendingId, shareUrl, patch, remove, share } = useResourceActions();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [versionsId, setVersionsId] = useState<string | null>(null);
   const [versions, setVersions] = useState<VersionRow[] | null>(null);
@@ -330,6 +372,13 @@ export function FileList({ files, folders }: { files: FileRow[]; folders: Folder
                     Versiones
                   </Button>
                   <Button
+                    variant="secondary"
+                    disabled={pendingId === file.id}
+                    onClick={() => share(file.id, "file")}
+                  >
+                    Compartir
+                  </Button>
+                  <Button
                     variant="danger"
                     disabled={pendingId === file.id}
                     onClick={() =>
@@ -345,6 +394,7 @@ export function FileList({ files, folders }: { files: FileRow[]; folders: Folder
                 </div>
               </>
             )}
+            {shareUrl?.id === file.id && <ShareLinkBox url={shareUrl.url} />}
             {versionsId === file.id && (
               <VersionsPanel
                 file={file}
