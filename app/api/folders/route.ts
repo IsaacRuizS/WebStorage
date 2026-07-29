@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
-import { foldersCollection } from "@/lib/db/collections";
+import { filesCollection, foldersCollection } from "@/lib/db/collections";
 import { toObjectId } from "@/lib/db/bson";
 import { getSession } from "@/lib/auth/session";
+import { deleteFiles } from "@/lib/files";
 import type { Folder } from "@/types/folder";
 
 const createFolderSchema = z.object({
@@ -154,11 +155,18 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
   }
 
-  // La carpeta y todo lo que cuelga de ella pasan juntas a la papelera
-  await folders.updateMany(
-    { owner_id: ownerId, $or: [{ _id: folder._id }, { path: descendantsOf(folder.path) }] },
-    { $set: { in_trash: true, updated_at: new Date() } }
-  );
+  const descendants = await folders
+    .find({ owner_id: ownerId, path: descendantsOf(folder.path) }, { projection: { _id: 1 } })
+    .toArray();
+  const folderIds = [folder._id, ...descendants.map((item) => item._id)];
+
+  // Se borra el subárbol completo: primero los archivos, que además liberan cuota
+  const files = await (await filesCollection())
+    .find({ owner_id: ownerId, folder_id: { $in: folderIds } }, { projection: { _id: 1 } })
+    .toArray();
+
+  await deleteFiles(ownerId, files.map((item) => item._id));
+  await folders.deleteMany({ owner_id: ownerId, _id: { $in: folderIds } });
 
   return NextResponse.json({ ok: true });
 }

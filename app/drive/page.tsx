@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ObjectId } from "mongodb";
-import { foldersCollection } from "@/lib/db/collections";
+import { filesCollection, foldersCollection } from "@/lib/db/collections";
 import { toObjectId } from "@/lib/db/bson";
 import { getSession } from "@/lib/auth/session";
 import { AppHeader } from "@/components/app-header";
 import { Card } from "@/components/ui";
-import { FolderList, NewFolderForm } from "@/app/drive/components";
+import { FileList, FolderList, NewFolderForm, UploadForm } from "@/app/drive/components";
 import type { Folder } from "@/types/folder";
 
 export default async function DrivePage({
@@ -26,8 +26,15 @@ export default async function DrivePage({
     : null;
   if (currentId && !current) redirect("/drive");
 
+  const parentId = current?._id ?? null;
+
   const children = await folders
-    .find({ owner_id: ownerId, parent_id: current?._id ?? null, in_trash: false })
+    .find({ owner_id: ownerId, parent_id: parentId, in_trash: false })
+    .sort({ name: 1 })
+    .toArray();
+
+  const files = await (await filesCollection())
+    .find({ owner_id: ownerId, folder_id: parentId, in_trash: false })
     .sort({ name: 1 })
     .toArray();
 
@@ -57,17 +64,31 @@ export default async function DrivePage({
             ))}
           </nav>
 
-          <Card>
+          <Card className="space-y-4">
             <h1 className="text-xl font-semibold">{current?.name ?? "Mi unidad"}</h1>
-            <div className="mt-4">
-              <NewFolderForm parentId={current?._id.toString() ?? null} />
-            </div>
+            <NewFolderForm parentId={parentId?.toString() ?? null} />
+            <UploadForm folderId={parentId?.toString() ?? null} />
           </Card>
 
           <Card>
+            <h2 className="mb-3 font-medium">Carpetas</h2>
             <FolderList
               folders={children.map(toFolderRow)}
               allFolders={allFolders.map(toFolderRow)}
+            />
+          </Card>
+
+          <Card>
+            <h2 className="mb-3 font-medium">Archivos</h2>
+            <FileList
+              files={files.map((file) => ({
+                id: file._id.toString(),
+                name: file.name,
+                size_bytes: file.size_bytes,
+                favorite: file.favorite,
+                version: file.current_version,
+              }))}
+              folders={allFolders.map(toFolderRow)}
             />
           </Card>
         </div>
