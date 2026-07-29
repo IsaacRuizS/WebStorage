@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { usersCollection } from "@/lib/db/collections";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSessionToken } from "@/lib/auth/token";
 import { buildSessionPayload, createSession, setSessionCookie } from "@/lib/auth/session";
-import { loginSchema } from "@/lib/validations/auth";
+
+const loginSchema = z.object({
+  email: z.email("Correo electrónico inválido"),
+  password: z.string().min(1, "La contraseña es obligatoria"),
+});
 
 export async function POST(request: Request) {
   const body = await request.json();

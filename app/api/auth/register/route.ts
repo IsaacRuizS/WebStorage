@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { z } from "zod";
 import { usersCollection } from "@/lib/db/collections";
 import { toLong } from "@/lib/db/bson";
 import { hashPassword } from "@/lib/auth/password";
 import { createSessionToken } from "@/lib/auth/token";
 import { buildSessionPayload, createSession, setSessionCookie } from "@/lib/auth/session";
-import { registerSchema } from "@/lib/validations/auth";
 import type { User } from "@/types/user";
 
 const DEFAULT_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024;
+
+const registerSchema = z.object({
+  name: z.string().min(1, "El nombre es obligatorio"),
+  email: z.email("Correo electrónico inválido"),
+  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+});
 
 export async function POST(request: Request) {
   const body = await request.json();

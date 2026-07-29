@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { usersCollection } from "@/lib/db/collections";
 import { generateTemporaryPassword, hashPassword } from "@/lib/auth/password";
 import { revokeUserSessions } from "@/lib/auth/session";
 import { sendTemporaryPassword } from "@/lib/mail/mailer";
-import { forgotPasswordSchema } from "@/lib/validations/auth";
 
-const GENERIC_RESPONSE = {
-  message: "Si el correo está registrado, vas a recibir una contraseña temporal",
-};
+const forgotPasswordSchema = z.object({
+  email: z.email("Correo electrónico inválido"),
+});
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -20,9 +20,8 @@ export async function POST(request: Request) {
   const users = await usersCollection();
   const user = await users.findOne({ email: parsed.data.email, active: true });
 
-  // La respuesta no cambia cuando el correo no existe para no revelar quién tiene cuenta
   if (!user) {
-    return NextResponse.json(GENERIC_RESPONSE);
+    return NextResponse.json({ error: "Ese correo no está registrado" }, { status: 404 });
   }
 
   const temporaryPassword = generateTemporaryPassword();
@@ -45,5 +44,5 @@ export async function POST(request: Request) {
   );
   await revokeUserSessions(user._id);
 
-  return NextResponse.json(GENERIC_RESPONSE);
+  return NextResponse.json({ message: "Te enviamos una contraseña temporal al correo" });
 }

@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { usersCollection } from "@/lib/db/collections";
 import { getSession } from "@/lib/auth/session";
 import { AppHeader } from "@/components/app-header";
-import { Card } from "@/components/card";
-import { UserList } from "@/app/users/components/user-list";
+import { Card } from "@/components/ui";
+import { UserList } from "@/app/users/components";
 
 export default async function UsersPage() {
   const session = await getSession();

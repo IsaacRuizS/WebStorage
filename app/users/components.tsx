@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/button";
+import { Button } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 
 export interface UserRow {

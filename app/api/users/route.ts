@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { z } from "zod";
 import { usersCollection } from "@/lib/db/collections";
 import { getSession, revokeUserSessions } from "@/lib/auth/session";
-import { updateUserSchema } from "@/lib/validations/user";
+
+const updateUserSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, "El nombre es obligatorio").optional(),
+  role: z.enum(["user", "admin"]).optional(),
+  active: z.boolean().optional(),
+});
 
 export async function GET() {
   const session = await getSession();

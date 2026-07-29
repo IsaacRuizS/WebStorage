@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { AppHeader } from "@/components/app-header";
-import { Card } from "@/components/card";
+import { Card } from "@/components/ui";
 
 export default async function HomePage() {
   const session = await getSession();

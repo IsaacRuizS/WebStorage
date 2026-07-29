@@ -4,10 +4,9 @@ import { ObjectId } from "mongodb";
 import { sessionsCollection, usersCollection } from "@/lib/db/collections";
 import { getSession } from "@/lib/auth/session";
 import { AppHeader } from "@/components/app-header";
-import { Card } from "@/components/card";
+import { Card } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
-import { ProfileForm } from "@/app/profile/components/profile-form";
-import { SessionList } from "@/app/profile/components/session-list";
+import { ProfileForm, SessionList } from "@/app/profile/components";
 
 export default async function ProfilePage() {
   const session = await getSession();

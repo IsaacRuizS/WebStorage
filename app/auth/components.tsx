@@ -3,11 +3,9 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
+import { Button, ErrorText, Input, Label } from "@/components/ui";
 
-export function RegisterForm() {
+export function ChangePasswordForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,13 +16,12 @@ export function RegisterForm() {
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const response = await fetch("/api/auth/register", {
+    const response = await fetch("/api/auth/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: formData.get("name"),
-        email: formData.get("email"),
-        password: formData.get("password"),
+        current_password: formData.get("current_password"),
+        new_password: formData.get("new_password"),
       }),
     });
 
@@ -32,7 +29,7 @@ export function RegisterForm() {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      setError(data.error ?? "No se pudo crear la cuenta");
+      setError(data.error ?? "No se pudo cambiar la contraseña");
       return;
     }
 
@@ -43,27 +40,29 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="mt-6 space-y-4">
       <div>
-        <Label htmlFor="name">Nombre</Label>
-        <Input id="name" name="name" required autoComplete="name" />
-      </div>
-      <div>
-        <Label htmlFor="email">Correo electrónico</Label>
-        <Input id="email" name="email" type="email" required autoComplete="email" />
-      </div>
-      <div>
-        <Label htmlFor="password">Contraseña</Label>
+        <Label htmlFor="current_password">Contraseña actual</Label>
         <Input
-          id="password"
-          name="password"
+          id="current_password"
+          name="current_password"
+          type="password"
+          required
+          autoComplete="current-password"
+        />
+      </div>
+      <div>
+        <Label htmlFor="new_password">Nueva contraseña</Label>
+        <Input
+          id="new_password"
+          name="new_password"
           type="password"
           required
           minLength={8}
           autoComplete="new-password"
         />
       </div>
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <ErrorText>{error}</ErrorText>}
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creando cuenta..." : "Crear cuenta"}
+        {loading ? "Guardando..." : "Cambiar contraseña"}
       </Button>
     </form>
   );

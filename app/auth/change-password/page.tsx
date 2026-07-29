@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
-import { Card } from "@/components/card";
-import { ChangePasswordForm } from "@/app/auth/components/change-password-form";
+import { Card } from "@/components/ui";
+import { ChangePasswordForm } from "@/app/auth/components";
 
 export default async function ChangePasswordPage() {
   const session = await getSession();

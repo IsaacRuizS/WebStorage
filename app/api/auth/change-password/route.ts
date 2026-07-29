@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { z } from "zod";
 import { usersCollection } from "@/lib/db/collections";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createSessionToken } from "@/lib/auth/token";
 import { getSession, setSessionCookie } from "@/lib/auth/session";
-import { changePasswordSchema } from "@/lib/validations/auth";
+
+const changePasswordSchema = z.object({
+  current_password: z.string().min(1, "La contraseña actual es obligatoria"),
+  new_password: z.string().min(8, "La nueva contraseña debe tener al menos 8 caracteres"),
+});
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -35,9 +40,7 @@ export async function POST(request: Request) {
   );
 
   // Se reemite el token para que deje de exigir el cambio, conservando la misma sesión
-  await setSessionCookie(
-    await createSessionToken({ ...session, must_change_password: false })
-  );
+  await setSessionCookie(await createSessionToken({ ...session, must_change_password: false }));
 
   return NextResponse.json({ ok: true });
 }

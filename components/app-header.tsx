@@ -1,8 +1,22 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { LogoutButton } from "@/components/logout-button";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
 import type { UserRole } from "@/types/user";
 
 export function AppHeader({ userName, role }: { userName: string; role: UserRole }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogout() {
+    setLoading(true);
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/auth/login");
+    router.refresh();
+  }
+
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
@@ -18,7 +32,9 @@ export function AppHeader({ userName, role }: { userName: string; role: UserRole
           <Link href="/profile" className="hover:text-zinc-900 dark:hover:text-white">
             {userName}
           </Link>
-          <LogoutButton />
+          <Button variant="secondary" onClick={handleLogout} disabled={loading}>
+            {loading ? "Saliendo..." : "Cerrar sesión"}
+          </Button>
         </div>
       </div>
     </header>
