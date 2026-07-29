@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Los scripts de mongosh no son código de la aplicación
+    "scripts/**",
   ]),
 ]);
 
