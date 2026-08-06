@@ -4,6 +4,8 @@ import { usersCollection } from "@/lib/db/collections";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSessionToken } from "@/lib/auth/token";
 import { buildSessionPayload, createSession, setSessionCookie } from "@/lib/auth/session";
+import { logActivity } from "@/lib/activity";
+import { getClientIp } from "@/lib/request";
 
 const loginSchema = z.object({
   email: z.email("Correo electrónico inválido"),
@@ -32,6 +34,7 @@ export async function POST(request: Request) {
 
   const sessionId = await createSession(user, request);
   await setSessionCookie(await createSessionToken(buildSessionPayload(user, sessionId)));
+  await logActivity({ userId: user._id, action: "login", ip: getClientIp(request) });
 
   return NextResponse.json({
     id: user._id.toString(),

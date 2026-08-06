@@ -15,5 +15,6 @@ export interface DriveFile {
   updated_at?: Date | null;
   favorite: boolean;
   in_trash: boolean;
+  deleted_at?: Date | null;
   tags: string[];
 }

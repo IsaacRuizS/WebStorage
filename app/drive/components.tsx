@@ -265,7 +265,7 @@ export function FolderList({
                       remove(
                         folder.id,
                         `/api/folders?id=${folder.id}`,
-                        `Se va a eliminar "${folder.name}" con todo su contenido. ¿Continuar?`
+                        `Se moverá "${folder.name}" con todo su contenido a la papelera. ¿Continuar?`
                       )
                     }
                   >
@@ -385,7 +385,7 @@ export function FileList({ files, folders }: { files: FileRow[]; folders: Folder
                       remove(
                         file.id,
                         `/api/files?id=${file.id}`,
-                        `Se va a eliminar "${file.name}" y todas sus versiones. ¿Continuar?`
+                        `Se moverá "${file.name}" a la papelera. ¿Continuar?`
                       )
                     }
                   >

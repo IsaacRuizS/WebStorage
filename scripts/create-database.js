@@ -60,13 +60,15 @@ db.createCollection("folders", {
         path: { bsonType: "string" },
         created_at: { bsonType: "date" },
         updated_at: { bsonType: ["date", "null"] },
-        in_trash: { bsonType: "bool" }
+        in_trash: { bsonType: "bool" },
+        deleted_at: { bsonType: ["date", "null"] }
       }
     }
   }
 });
 db.folders.createIndex({ owner_id: 1, parent_id: 1 }); // navegar la jerarquia de carpetas
 db.folders.createIndex({ owner_id: 1, name: 1 }); // buscar carpeta por nombre
+db.folders.createIndex({ owner_id: 1, in_trash: 1 }); // listar la papelera del usuario
 
 db.createCollection("files", {
   validator: {
@@ -86,6 +88,7 @@ db.createCollection("files", {
         updated_at: { bsonType: ["date", "null"] },
         favorite: { bsonType: "bool" },
         in_trash: { bsonType: "bool" },
+        deleted_at: { bsonType: ["date", "null"] },
         tags: { bsonType: "array", items: { bsonType: "string" } }
       }
     }
@@ -94,6 +97,7 @@ db.createCollection("files", {
 db.files.createIndex({ owner_id: 1, folder_id: 1 }); // listar archivos por carpeta
 db.files.createIndex({ owner_id: 1, mime_type: 1 }); // filtrar archivos por tipo
 db.files.createIndex({ name: "text", tags: "text" }); // busqueda rapida por texto
+db.files.createIndex({ owner_id: 1, in_trash: 1 }); // listar la papelera del usuario
 
 db.createCollection("file_versions", {
   validator: {
@@ -191,6 +195,7 @@ db.createCollection("activity_logs", {
         },
         resource_id: { bsonType: ["objectId", "null"] },
         resource_type: { bsonType: ["string", "null"] },
+        resource_name: { bsonType: ["string", "null"] },
         ip: { bsonType: ["string", "null"] },
         created_at: { bsonType: "date" }
       }
@@ -208,6 +213,7 @@ db.createCollection("notifications", {
         user_id: { bsonType: "objectId" },
         type: { enum: ["share", "comment", "system", "storage", "access_request"] },
         message: { bsonType: "string" },
+        link: { bsonType: ["string", "null"] },
         read: { bsonType: "bool" },
         created_at: { bsonType: "date" }
       }
@@ -231,21 +237,5 @@ db.createCollection("tags", {
 });
 db.tags.createIndex({ owner_id: 1, name: 1 }, { unique: true }); // etiqueta unica por usuario
 
-db.createCollection("trash", {
-  validator: {
-    $jsonSchema: {
-      bsonType: "object",
-      required: ["resource_id", "resource_type", "owner_id", "deleted_at", "purge_at"],
-      properties: {
-        resource_id: { bsonType: "objectId" },
-        resource_type: { enum: ["file", "folder"] },
-        owner_id: { bsonType: "objectId" },
-        original_path: { bsonType: "string" },
-        deleted_at: { bsonType: "date" },
-        purge_at: { bsonType: "date" }
-      }
-    }
-  }
-});
-db.trash.createIndex({ owner_id: 1, deleted_at: -1 }); // papelera del usuario
-db.trash.createIndex({ purge_at: 1 }, { expireAfterSeconds: 0 }); // TTL: purga definitiva
+// La papelera no usa una coleccion aparte: se implementa con in_trash/deleted_at
+// directamente en "files" y "folders" para no tener que sincronizar dos fuentes de verdad.

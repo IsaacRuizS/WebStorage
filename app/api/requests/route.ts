@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
-import { accessRequestsCollection, sharesCollection } from "@/lib/db/collections";
+import {
+  accessRequestsCollection,
+  filesCollection,
+  foldersCollection,
+  sharesCollection,
+  usersCollection,
+} from "@/lib/db/collections";
 import { toObjectId } from "@/lib/db/bson";
 import { getSession } from "@/lib/auth/session";
+import { createNotification } from "@/lib/notifications";
 import type { AccessRequest } from "@/types/access-request";
+import type { ResourceType } from "@/types/resource";
 import type { Share } from "@/types/share";
 
 const createRequestSchema = z.object({
@@ -73,6 +81,17 @@ export async function POST(request: Request) {
   };
   await requests.insertOne(accessRequest);
 
+  const [resourceName, requesterUser] = await Promise.all([
+    getResourceName(share.resource_id, share.resource_type),
+    (await usersCollection()).findOne({ _id: requesterId }, { projection: { name: 1 } }),
+  ]);
+  await createNotification({
+    userId: share.owner_id,
+    type: "access_request",
+    message: `${requesterUser?.name ?? "Alguien"} solicitó acceso a "${resourceName}"`,
+    link: "/requests",
+  });
+
   return NextResponse.json({ id: accessRequest._id.toString() }, { status: 201 });
 }
 
@@ -107,7 +126,24 @@ export async function PATCH(request: Request) {
     await grantAccess(accessRequest);
   }
 
+  const resourceName = await getResourceName(accessRequest.resource_id, accessRequest.resource_type);
+  await createNotification({
+    userId: accessRequest.requester_id,
+    type: "access_request",
+    message:
+      parsed.data.status === "approved"
+        ? `Tu solicitud de acceso a "${resourceName}" fue aprobada`
+        : `Tu solicitud de acceso a "${resourceName}" fue rechazada`,
+    link: "/requests",
+  });
+
   return NextResponse.json({ ok: true });
+}
+
+async function getResourceName(resourceId: ObjectId, type: ResourceType) {
+  const collection = type === "file" ? await filesCollection() : await foldersCollection();
+  const doc = await collection.findOne({ _id: resourceId }, { projection: { name: 1 } });
+  return doc?.name ?? "un recurso";
 }
 
 // Aprobar convierte la solicitud en una compartición directa con el solicitante

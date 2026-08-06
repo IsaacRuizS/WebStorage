@@ -4,14 +4,14 @@ import type { DriveFile } from "@/types/file";
 import type { Folder } from "@/types/folder";
 
 export async function getAccessibleFile(fileId: ObjectId, userId: ObjectId) {
-  const file = await (await filesCollection()).findOne({ _id: fileId });
+  const file = await (await filesCollection()).findOne({ _id: fileId, in_trash: false });
   if (!file) return null;
 
   return file.owner_id.equals(userId) || (await isFileShared(file, userId)) ? file : null;
 }
 
 export async function getAccessibleFolder(folderId: ObjectId, userId: ObjectId) {
-  const folder = await (await foldersCollection()).findOne({ _id: folderId });
+  const folder = await (await foldersCollection()).findOne({ _id: folderId, in_trash: false });
   if (!folder) return null;
 
   return folder.owner_id.equals(userId) || (await isFolderShared(folder, userId)) ? folder : null;

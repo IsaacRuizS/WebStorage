@@ -4,9 +4,14 @@ import { z } from "zod";
 import { filesCollection, foldersCollection, usersCollection } from "@/lib/db/collections";
 import { toInt, toLong, toObjectId } from "@/lib/db/bson";
 import { getSession } from "@/lib/auth/session";
-import { deleteFiles, getExtension } from "@/lib/files";
+import { getExtension, trashFiles } from "@/lib/files";
 import { buildStorageKey, uploadObject } from "@/lib/storage/supabase";
+import { logActivity } from "@/lib/activity";
+import { createNotification } from "@/lib/notifications";
+import { getClientIp } from "@/lib/request";
 import type { DriveFile } from "@/types/file";
+
+const STORAGE_WARNING_RATIO = 0.9;
 
 const updateFileSchema = z.object({
   id: z.string(),
@@ -77,6 +82,7 @@ export async function POST(request: Request) {
     updated_at: null,
     favorite: false,
     in_trash: false,
+    deleted_at: null,
     tags: [],
   };
   await (await filesCollection()).insertOne(file);
@@ -85,6 +91,28 @@ export async function POST(request: Request) {
     { _id: ownerId },
     { $inc: { "storage.used_bytes": toLong(upload.size) } }
   );
+
+  await logActivity({
+    userId: ownerId,
+    action: "upload",
+    resourceId: fileId,
+    resourceType: "file",
+    resourceName: file.name,
+    ip: getClientIp(request),
+  });
+
+  // Solo se avisa la vez que se cruza el umbral, no en cada subida mientras siga por encima
+  const warningThreshold = user.storage.limit_bytes * STORAGE_WARNING_RATIO;
+  const wasBelowThreshold = user.storage.used_bytes < warningThreshold;
+  const isNowAboveThreshold = user.storage.used_bytes + upload.size >= warningThreshold;
+  if (wasBelowThreshold && isNowAboveThreshold) {
+    await createNotification({
+      userId: ownerId,
+      type: "storage",
+      message: "Estás usando más del 90% de tu almacenamiento disponible",
+      link: "/profile",
+    });
+  }
 
   return NextResponse.json({ id: fileId.toString() }, { status: 201 });
 }
@@ -126,6 +154,29 @@ export async function PATCH(request: Request) {
     }
   );
 
+  const ip = getClientIp(request);
+  const resourceName = name ?? file.name;
+  if (name && name !== file.name) {
+    await logActivity({
+      userId: ownerId,
+      action: "rename",
+      resourceId: file._id,
+      resourceType: "file",
+      resourceName,
+      ip,
+    });
+  }
+  if (isMoving) {
+    await logActivity({
+      userId: ownerId,
+      action: "move",
+      resourceId: file._id,
+      resourceType: "file",
+      resourceName,
+      ip,
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }
 
@@ -136,10 +187,19 @@ export async function DELETE(request: Request) {
   const ownerId = new ObjectId(session.sub);
   const fileId = toObjectId(new URL(request.url).searchParams.get("id"));
   const file = fileId
-    ? await (await filesCollection()).findOne({ _id: fileId, owner_id: ownerId })
+    ? await (await filesCollection()).findOne({ _id: fileId, owner_id: ownerId, in_trash: false })
     : null;
   if (!file) return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
 
-  await deleteFiles(ownerId, [file._id]);
+  await trashFiles(ownerId, [file._id]);
+  await logActivity({
+    userId: ownerId,
+    action: "delete",
+    resourceId: file._id,
+    resourceType: "file",
+    resourceName: file.name,
+    ip: getClientIp(request),
+  });
+
   return NextResponse.json({ ok: true });
 }

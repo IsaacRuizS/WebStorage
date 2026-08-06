@@ -5,6 +5,8 @@ import { toObjectId } from "@/lib/db/bson";
 import { getSession } from "@/lib/auth/session";
 import { getAccessibleFile } from "@/lib/auth/authorize";
 import { createDownloadUrl } from "@/lib/storage/supabase";
+import { logActivity } from "@/lib/activity";
+import { getClientIp } from "@/lib/request";
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -26,5 +28,15 @@ export async function GET(request: Request) {
 
   // El permiso se valida acá y recién entonces se firma la URL del bucket privado
   const url = await createDownloadUrl(storageKey, fileName);
+
+  await logActivity({
+    userId: new ObjectId(session.sub),
+    action: "download",
+    resourceId: file._id,
+    resourceType: "file",
+    resourceName: fileName,
+    ip: getClientIp(request),
+  });
+
   return NextResponse.redirect(url);
 }

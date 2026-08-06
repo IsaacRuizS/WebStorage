@@ -4,7 +4,10 @@ import { z } from "zod";
 import { filesCollection, foldersCollection } from "@/lib/db/collections";
 import { toObjectId } from "@/lib/db/bson";
 import { getSession } from "@/lib/auth/session";
-import { deleteFiles } from "@/lib/files";
+import { trashFiles } from "@/lib/files";
+import { buildPath, descendantsOf, folderSubtreeIds } from "@/lib/folders";
+import { logActivity } from "@/lib/activity";
+import { getClientIp } from "@/lib/request";
 import type { Folder } from "@/types/folder";
 
 const createFolderSchema = z.object({
@@ -64,6 +67,7 @@ export async function POST(request: Request) {
     created_at: new Date(),
     updated_at: null,
     in_trash: false,
+    deleted_at: null,
   };
   await folders.insertOne(folder);
 
@@ -140,6 +144,28 @@ export async function PATCH(request: Request) {
     ]);
   }
 
+  const ip = getClientIp(request);
+  if (parsed.data.name && newName !== folder.name) {
+    await logActivity({
+      userId: ownerId,
+      action: "rename",
+      resourceId: folder._id,
+      resourceType: "folder",
+      resourceName: newName,
+      ip,
+    });
+  }
+  if (isMoving) {
+    await logActivity({
+      userId: ownerId,
+      action: "move",
+      resourceId: folder._id,
+      resourceType: "folder",
+      resourceName: newName,
+      ip,
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }
 
@@ -150,35 +176,36 @@ export async function DELETE(request: Request) {
   const ownerId = new ObjectId(session.sub);
   const folders = await foldersCollection();
   const folderId = toObjectId(new URL(request.url).searchParams.get("id"));
-  const folder = folderId ? await folders.findOne({ _id: folderId, owner_id: ownerId }) : null;
+  const folder = folderId
+    ? await folders.findOne({ _id: folderId, owner_id: ownerId, in_trash: false })
+    : null;
   if (!folder) {
     return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
   }
 
-  const descendants = await folders
-    .find({ owner_id: ownerId, path: descendantsOf(folder.path) }, { projection: { _id: 1 } })
-    .toArray();
-  const folderIds = [folder._id, ...descendants.map((item) => item._id)];
-
-  // Se borra el subárbol completo: primero los archivos, que además liberan cuota
+  // Se manda a la papelera el subárbol completo: la carpeta, sus descendientes y sus archivos
+  const folderIds = await folderSubtreeIds(ownerId, folder);
   const files = await (await filesCollection())
-    .find({ owner_id: ownerId, folder_id: { $in: folderIds } }, { projection: { _id: 1 } })
+    .find(
+      { owner_id: ownerId, folder_id: { $in: folderIds }, in_trash: false },
+      { projection: { _id: 1 } }
+    )
     .toArray();
 
-  await deleteFiles(ownerId, files.map((item) => item._id));
-  await folders.deleteMany({ owner_id: ownerId, _id: { $in: folderIds } });
+  await trashFiles(ownerId, files.map((item) => item._id));
+  await folders.updateMany(
+    { owner_id: ownerId, _id: { $in: folderIds } },
+    { $set: { in_trash: true, deleted_at: new Date() } }
+  );
+
+  await logActivity({
+    userId: ownerId,
+    action: "delete",
+    resourceId: folder._id,
+    resourceType: "folder",
+    resourceName: folder.name,
+    ip: getClientIp(request),
+  });
 
   return NextResponse.json({ ok: true });
-}
-
-function buildPath(parentPath: string, name: string) {
-  return `${parentPath}/${name}`;
-}
-
-function descendantsOf(path: string) {
-  return { $regex: `^${escapeRegExp(path)}/` };
-}
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

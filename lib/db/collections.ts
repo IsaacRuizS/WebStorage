@@ -1,8 +1,10 @@
 import { getDb } from "@/lib/db/mongodb";
 import type { AccessRequest } from "@/types/access-request";
+import type { ActivityLog } from "@/types/activity-log";
 import type { DriveFile } from "@/types/file";
 import type { FileVersion } from "@/types/file-version";
 import type { Folder } from "@/types/folder";
+import type { Notification } from "@/types/notification";
 import type { Session } from "@/types/session";
 import type { Share } from "@/types/share";
 import type { User } from "@/types/user";
@@ -33,4 +35,12 @@ export async function sharesCollection() {
 
 export async function accessRequestsCollection() {
   return (await getDb()).collection<AccessRequest>("access_requests");
+}
+
+export async function activityLogsCollection() {
+  return (await getDb()).collection<ActivityLog>("activity_logs");
+}
+
+export async function notificationsCollection() {
+  return (await getDb()).collection<Notification>("notifications");
 }

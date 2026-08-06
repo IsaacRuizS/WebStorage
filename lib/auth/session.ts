@@ -7,6 +7,7 @@ import {
   SESSION_DURATION_SECONDS,
   verifySessionToken,
 } from "@/lib/auth/token";
+import { getClientIp } from "@/lib/request";
 import type { SessionPayload } from "@/types/session";
 import type { User } from "@/types/user";
 
@@ -88,9 +89,4 @@ async function isSessionActive(sessionId: string) {
   const sessions = await sessionsCollection();
   const session = await sessions.findOne({ _id: new ObjectId(sessionId), active: true });
   return Boolean(session && session.expires_at > new Date());
-}
-
-function getClientIp(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for");
-  return forwarded ? forwarded.split(",")[0].trim() : null;
 }

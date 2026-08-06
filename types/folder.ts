@@ -9,4 +9,5 @@ export interface Folder {
   created_at: Date;
   updated_at?: Date | null;
   in_trash: boolean;
+  deleted_at?: Date | null;
 }

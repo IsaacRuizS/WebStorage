@@ -5,6 +5,8 @@ import { z } from "zod";
 import { filesCollection, foldersCollection, sharesCollection } from "@/lib/db/collections";
 import { toObjectId } from "@/lib/db/bson";
 import { getSession } from "@/lib/auth/session";
+import { logActivity } from "@/lib/activity";
+import { getClientIp } from "@/lib/request";
 import type { Share } from "@/types/share";
 
 const createShareSchema = z.object({
@@ -38,7 +40,12 @@ export async function POST(request: Request) {
   const { resource_type, permission } = parsed.data;
   const ownerId = new ObjectId(session.sub);
   const resourceId = toObjectId(parsed.data.resource_id);
-  if (!resourceId || !(await ownsResource(resourceId, resource_type, ownerId))) {
+  if (!resourceId) {
+    return NextResponse.json({ error: "Recurso no encontrado" }, { status: 404 });
+  }
+
+  const resource = await ownedResource(resourceId, resource_type, ownerId);
+  if (!resource) {
     return NextResponse.json({ error: "Recurso no encontrado" }, { status: 404 });
   }
 
@@ -67,6 +74,15 @@ export async function POST(request: Request) {
   };
   await shares.insertOne(share);
 
+  await logActivity({
+    userId: ownerId,
+    action: "share",
+    resourceId: share.resource_id,
+    resourceType: share.resource_type,
+    resourceName: resource.name,
+    ip: getClientIp(request),
+  });
+
   return NextResponse.json({ token: share.link_token }, { status: 201 });
 }
 
@@ -89,7 +105,7 @@ export async function DELETE(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-async function ownsResource(resourceId: ObjectId, type: "file" | "folder", ownerId: ObjectId) {
+async function ownedResource(resourceId: ObjectId, type: "file" | "folder", ownerId: ObjectId) {
   const collection = type === "file" ? await filesCollection() : await foldersCollection();
-  return Boolean(await collection.findOne({ _id: resourceId, owner_id: ownerId }));
+  return collection.findOne({ _id: resourceId, owner_id: ownerId });
 }

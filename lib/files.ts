@@ -3,8 +3,28 @@ import { fileVersionsCollection, filesCollection, usersCollection } from "@/lib/
 import { toLong } from "@/lib/db/bson";
 import { removeObjects } from "@/lib/storage/supabase";
 
-// Borra archivos con todas sus versiones y devuelve al usuario el espacio que ocupaban
-export async function deleteFiles(ownerId: ObjectId, fileIds: ObjectId[]) {
+// Mueve archivos a la papelera: solo cambia su estado, no libera espacio ni toca el storage
+export async function trashFiles(ownerId: ObjectId, fileIds: ObjectId[]) {
+  if (fileIds.length === 0) return;
+
+  await (await filesCollection()).updateMany(
+    { _id: { $in: fileIds }, owner_id: ownerId },
+    { $set: { in_trash: true, deleted_at: new Date() } }
+  );
+}
+
+// Saca archivos de la papelera, dejándolos como estaban antes de eliminarse
+export async function restoreFiles(ownerId: ObjectId, fileIds: ObjectId[]) {
+  if (fileIds.length === 0) return;
+
+  await (await filesCollection()).updateMany(
+    { _id: { $in: fileIds }, owner_id: ownerId },
+    { $set: { in_trash: false, deleted_at: null } }
+  );
+}
+
+// Borra archivos con todas sus versiones para siempre y devuelve al usuario el espacio que ocupaban
+export async function purgeFiles(ownerId: ObjectId, fileIds: ObjectId[]) {
   if (fileIds.length === 0) return;
 
   const files = await filesCollection();
