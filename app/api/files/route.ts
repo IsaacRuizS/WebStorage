@@ -18,6 +18,7 @@ const updateFileSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio").optional(),
   folder_id: z.string().nullish(),
   favorite: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 export async function GET(request: Request) {
@@ -133,7 +134,7 @@ export async function PATCH(request: Request) {
   const file = fileId ? await files.findOne({ _id: fileId, owner_id: ownerId }) : null;
   if (!file) return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
 
-  const { name, favorite } = parsed.data;
+  const { name, favorite, tags } = parsed.data;
   const isMoving = parsed.data.folder_id !== undefined;
   const folderId = isMoving ? toObjectId(parsed.data.folder_id) : file.folder_id;
 
@@ -148,6 +149,7 @@ export async function PATCH(request: Request) {
       $set: {
         ...(name && { name, extension: getExtension(name) }),
         ...(favorite !== undefined && { favorite }),
+        ...(tags !== undefined && { tags }),
         ...(isMoving && { folder_id: folderId }),
         updated_at: new Date(),
       },

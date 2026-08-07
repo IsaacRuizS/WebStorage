@@ -8,6 +8,8 @@ import type { Notification } from "@/types/notification";
 import type { Session } from "@/types/session";
 import type { Share } from "@/types/share";
 import type { User } from "@/types/user";
+import type { Comment } from "@/types/comment";
+import type { Tag } from "@/types/tag";
 
 export async function usersCollection() {
   return (await getDb()).collection<User>("users");
@@ -43,4 +45,12 @@ export async function activityLogsCollection() {
 
 export async function notificationsCollection() {
   return (await getDb()).collection<Notification>("notifications");
+}
+
+export async function commentsCollection() {
+  return (await getDb()).collection<Comment>("comments");
+}
+
+export async function tagsCollection() {
+  return (await getDb()).collection<Tag>("tags");
 }
